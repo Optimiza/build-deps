@@ -1,0 +1,37 @@
+diff --git a/libavcodec/videotoolboxenc.c b/libavcodec/videotoolboxenc.c
+index de5292370..2c046bad7 100644
+--- a/libavcodec/videotoolboxenc.c
++++ b/libavcodec/videotoolboxenc.c
+@@ -136,6 +136,7 @@ static struct{
+     CFStringRef kVTCompressionPropertyKey_AllowOpenGOP;
+     CFStringRef kVTCompressionPropertyKey_MaximizePowerEfficiency;
+     CFStringRef kVTCompressionPropertyKey_ReferenceBufferCount;
++    CFStringRef kVTCompressionPropertyKey_EnableLTR;
+     CFStringRef kVTCompressionPropertyKey_MaxAllowedFrameQP;
+     CFStringRef kVTCompressionPropertyKey_MinAllowedFrameQP;
+ 
+@@ -215,6 +216,7 @@ static void loadVTEncSymbols(void){
+             "MaximizePowerEfficiency");
+     GET_SYM(kVTCompressionPropertyKey_ReferenceBufferCount,
+             "ReferenceBufferCount");
++    GET_SYM(kVTCompressionPropertyKey_EnableLTR, "EnableLTR");
+     GET_SYM(kVTCompressionPropertyKey_MaxAllowedFrameQP, "MaxAllowedFrameQP");
+     GET_SYM(kVTCompressionPropertyKey_MinAllowedFrameQP, "MinAllowedFrameQP");
+     GET_SYM(kVTCompressionPropertyKey_SpatialAdaptiveQPLevel, "SpatialAdaptiveQPLevel");
+@@ -1618,6 +1620,16 @@ static int vtenc_create_encoder(AVCodecContext   *avctx,
+         }
+     }
+ 
++    if (avctx->codec_id == AV_CODEC_ID_H264) {
++        // Low-latency rate control makes VideoToolbox mark long-term
++        // references that some hardware decoders mishandle. Other modes
++        // answer "not supported", which is logged and ignored.
++        set_encoder_property_or_log(avctx,
++                                    compat_keys.kVTCompressionPropertyKey_EnableLTR,
++                                    "EnableLTR",
++                                    kCFBooleanFalse);
++    }
++
+     if (vtctx->spatialaq >= 0) {
+         set_encoder_int_property_or_log(avctx,
+                                         compat_keys.kVTCompressionPropertyKey_SpatialAdaptiveQPLevel,
