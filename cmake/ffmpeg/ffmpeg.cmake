@@ -19,6 +19,18 @@ foreach(patch_file ${FFMPEG_PATCH_FILES})
     APPLY_GIT_PATCH(${FFMPEG_GENERATED_SRC_PATH} ${patch_file})
 endforeach()
 
+# APPLY_GIT_PATCH only warns when a patch does not apply; this one changes runtime behaviour.
+# The option line is the one token only the complete patch produces.
+if(APPLE AND BUILD_FFMPEG_ENCODERS AND (BUILD_FFMPEG_ALL_PATCHES OR BUILD_FFMPEG_VIDEOTOOLBOX_PATCHES))
+    file(READ "${FFMPEG_GENERATED_SRC_PATH}/libavcodec/videotoolboxenc.c" FFMPEG_VIDEOTOOLBOX_SOURCE)
+    string(FIND "${FFMPEG_VIDEOTOOLBOX_SOURCE}" "OFFSET(enable_ltr)" FFMPEG_VIDEOTOOLBOX_LTR_POS)
+    unset(FFMPEG_VIDEOTOOLBOX_SOURCE)
+    if(FFMPEG_VIDEOTOOLBOX_LTR_POS EQUAL -1)
+        message(FATAL_ERROR "The videotoolbox patch ${CMAKE_CURRENT_SOURCE_DIR}/patches/FFmpeg/FFmpeg/videotoolbox/01-disable-h264-ltr.patch "
+                "is not fully in videotoolboxenc.c; refusing to build H.264 with long-term references.")
+    endif()
+endif()
+
 if(${arch} STREQUAL "aarch64" OR ${arch} STREQUAL "arm64")
     set(CBS_ARCH_PATH arm)
 elseif (${arch} STREQUAL "ppc64le")

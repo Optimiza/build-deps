@@ -1,5 +1,5 @@
 diff --git a/libavcodec/videotoolboxenc.c b/libavcodec/videotoolboxenc.c
-index de5292370..2c046bad7 100644
+index de5292370..693432f2b 100644
 --- a/libavcodec/videotoolboxenc.c
 +++ b/libavcodec/videotoolboxenc.c
 @@ -136,6 +136,7 @@ static struct{
@@ -18,20 +18,36 @@ index de5292370..2c046bad7 100644
      GET_SYM(kVTCompressionPropertyKey_MaxAllowedFrameQP, "MaxAllowedFrameQP");
      GET_SYM(kVTCompressionPropertyKey_MinAllowedFrameQP, "MinAllowedFrameQP");
      GET_SYM(kVTCompressionPropertyKey_SpatialAdaptiveQPLevel, "SpatialAdaptiveQPLevel");
-@@ -1618,6 +1620,16 @@ static int vtenc_create_encoder(AVCodecContext   *avctx,
+@@ -290,6 +292,7 @@ typedef struct VTEncContext {
+     int power_efficient;
+     int max_ref_frames;
+     int spatialaq;
++    int enable_ltr;
+ } VTEncContext;
+ 
+ static void vtenc_free_buf_node(BufNode *info)
+@@ -1618,6 +1621,16 @@ static int vtenc_create_encoder(AVCodecContext   *avctx,
          }
      }
  
-+    if (avctx->codec_id == AV_CODEC_ID_H264) {
++    if (avctx->codec_id == AV_CODEC_ID_H264 && vtctx->enable_ltr >= 0) {
 +        // Low-latency rate control makes VideoToolbox mark long-term
 +        // references that some hardware decoders mishandle. Other modes
 +        // answer "not supported", which is logged and ignored.
 +        set_encoder_property_or_log(avctx,
 +                                    compat_keys.kVTCompressionPropertyKey_EnableLTR,
-+                                    "EnableLTR",
-+                                    kCFBooleanFalse);
++                                    "enable_ltr",
++                                    vtctx->enable_ltr ? kCFBooleanTrue : kCFBooleanFalse);
 +    }
 +
      if (vtctx->spatialaq >= 0) {
          set_encoder_int_property_or_log(avctx,
                                          compat_keys.kVTCompressionPropertyKey_SpatialAdaptiveQPLevel,
+@@ -2830,6 +2843,7 @@ static const AVOption h264_options[] = {
+ 
+     { "constant_bit_rate", "Require constant bit rate (macOS 13 or newer)", OFFSET(constant_bit_rate), AV_OPT_TYPE_BOOL, { .i64 = 0 }, 0, 1, VE },
+     { "max_slice_bytes", "Set the maximum number of bytes in an H.264 slice.", OFFSET(max_slice_bytes), AV_OPT_TYPE_INT, { .i64 = -1 }, -1, INT_MAX, VE },
++    { "enable_ltr", "Allow long-term reference frames (-1 keeps the system default, 0 disables them).", OFFSET(enable_ltr), AV_OPT_TYPE_INT, { .i64 = 0 }, -1, 1, VE },
+     COMMON_OPTIONS
+     { NULL },
+ };
